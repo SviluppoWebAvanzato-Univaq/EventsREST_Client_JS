@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Javascript REST Client</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="res/webconsole.css"/>
+        <style>
+            body {
+                font-family: Verdana, Arial, Helvetica, sans-serif;
+                font-size: 10pt;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>REST Client</h1>
+
+        <p>This HTML page shows how to make calls to the EventsREST RESTful API using Javascript. AJAX calls are all asynchronous, handled using Promises and async functions.</p>
+        <p>The <strong>testrestclient_xhr.js</strong> script implements a simple REST client using the XMLHTTPRequest object.
+            The <strong>testrestclient_fetch.js</strong> script implements a simple REST client using the Fetch API.
+            The <strong>testrestclient_jquery.js</strong> script implements a simple REST client using the JQuery library and its the JQuery.ajax helper.
+            The <strong>webconsole.js</strong> script (and the webconsole.css stylesheet) implements a simple output interface that is used by the client to write call traces on the webpage.</p>
+
+        <p><button id="runx">Run Tests (XMLHTTPRequest)</button> 
+            <button id="runf">Run Tests (Fetch API)</button>  
+            <button id="runj">Run Tests (JQuery)</button>  
+            <button id="stop">Stop Tests</button></p>
+
+        <div id="c" style="width: 100%; min-height: 5em;"></div>
+
+        <script src="res/webconsole.js">/* */</script>
+        <script src="res/testrestclient_fetch.js">/* */</script>
+        <script src="res/testrestclient_xhr.js">/* */</script>
+        <script src="res/jquery.min.js">/* */</script>
+        <script src="res/testrestclient_jquery.js">/* */</script>
+        <script>
+            let dummy_json_entry = "{ \"uid\" : \"IDabc\", \"summary\" : \"Event IDabc\", \"location\" : null, \"start\" : \"2024-04-10T13:48:48+02:00\", \"end\" : \"2024-04-10T13:48:48.295207+02:00\", \"categories\" : null, \"attachment\" : \"Y2lhbyBhIHR1dHRp\", \"participants\" : [ { \"name\" : \"Pinco Pallino #0\", \"email\" : \"pinco.pallino0@univaq.it\" }, { \"name\" : \"Pinco Pallino #1\", \"email\" : \"pinco.pallino1@univaq.it\" } ], \"recurrence\" : { \"count\" : null, \"interval\" : 2, \"until\" : \"2024-06-10T13:48+02:00\", \"frequency\" : \"WEEKLY\" } }";
+            let baseURI = "http://localhost:8085/EventsREST/rest";
+            //define the tests to perform
+            let tests = [
+                {description: "Lista collection",
+                    url: baseURI + "/events?from=2024-02-01T00:00Z&to=2024-03-01T00:00Z&cat=work,personal",
+                    method: "GET",
+                    payload: null,
+                    payloadType: null,
+                    acceptType: "application/json",
+                    authorization: null
+                },
+                {description: "Dimensione collection",
+                    url: baseURI + "/events/count?from=2024-02-01T00:00Z&to=2024-03-01T00:00Z&cat=work,personal",
+                    method: "GET",
+                    payload: null,
+                    payloadType: null,
+                    acceptType: "application/json",
+                    authorization: null
+                },
+                {description: "Singolo item",
+                    url: baseURI + "/events/IDabc",
+                    method: "GET",
+                    payload: null,
+                    payloadType: null,
+                    acceptType: "application/json",
+                    authorization: null
+                },
+                {description: "Sotto-item",
+                    url: baseURI + "/events/IDabc/participants",
+                    method: "GET",
+                    payload: null,
+                    payloadType: null,
+                    acceptType: "application/json",
+                    authorization: null
+                },
+
+                {description: "Login",
+                    url: baseURI + "/auth/login",
+                    method: "POST",
+                    payload: "username=u&password=p",
+                    payloadType: "application/x-www-form-urlencoded",
+                    acceptType: null,
+                    authorization: null
+                },
+                {description: "Creazione item",
+                    url: baseURI + "/events",
+                    method: "POST",
+                    payload: dummy_json_entry,
+                    payloadType: "application/json",
+                    acceptType: null,
+                    authorization: true
+                },
+                {description: "Aggiornamento item",
+                    url: baseURI + "/events/IDabc",
+                    method: "PUT",
+                    payload: dummy_json_entry,
+                    payloadType: "application/json",
+                    acceptType: null,
+                    authorization: true
+                },
+                {description: "Eliminazione item",
+                    url: baseURI + "/events/IDabc",
+                    method: "DELETE",
+                    payload: null,
+                    payloadType: null,
+                    acceptType: null,
+                    authorization: true
+                },
+                {description: "Eliminazione item (senza autorizzazione)",
+                    url: baseURI + "/events/IDabc",
+                    method: "DELETE",
+                    payload: null,
+                    payloadType: null,
+                    acceptType: null,
+                    authorization: null
+                }
+            ];
+
+            //create the output area
+            let c = new WebConsole("c");
+            //create the REST clients
+            let t_ajax = new TestRestClient_XHR();
+            let t_fetch = new TestRestClient_Fetch();
+            let t_jquery = new TestRestClient_JQuery();
+            //setup the buttons
+            let x_b = document.getElementById("runx");
+            let f_b = document.getElementById("runf");
+            let j_b = document.getElementById("runj");
+            let s_b = document.getElementById("stop");
+            //handle button events
+            x_b.addEventListener("click", () => startTests(t_ajax));
+            f_b.addEventListener("click", () => startTests(t_fetch));
+            j_b.addEventListener("click", () => startTests(t_jquery));
+            s_b.addEventListener("click", () => stopTests());
+            //
+            function startTests(client) {
+                f_b.disabled = true;
+                x_b.disabled = true;
+                j_b.disabled = true;
+                s_b.disabled = false;
+                c.clear();
+                t_fetch.stopTests();
+                t_ajax.stopTests();
+                t_jquery.stopTests();
+                client.doTests(tests, c)
+                        .finally(() => {
+                            f_b.disabled = false;
+                            x_b.disabled = false;
+                            j_b.disabled = false;
+                            s_b.disabled = true;
+                            c.success("Tests complete");
+                        });
+            }
+            //
+            function stopTests() {
+                c.error("Tests aborted");
+                f_b.disabled = false;
+                x_b.disabled = false;
+                x_b.disabled = false;
+                s_b.disabled = true;
+                t_fetch.stopTests();
+                t_ajax.stopTests();
+                t_jquery.stopTests();
+            }
+        </script>
+    </body>
+</html>	
